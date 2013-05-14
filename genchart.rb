@@ -23,42 +23,123 @@ def generate_html_name filename
   return str
 end
 
-def write_header file
-  file.write "<html>\n"
-  file.write "<head>\n"
-  file.write "<script type=\"text/javascript\" src=\"dygraph-combined.js\"></script>\n"
-  file.write "</head>\n"
-  file.write "<body>\n"
-  file.write "<div id=\"graphdiv\"></div>\n"
-  file.write "<script type=\"text/javascript\">\n"
-  file.write "g = new Dygraph(\n"
-  file.write "document.getElementById(\"graphdiv\"), \"Date,Temperature\\n\" +\n"
+def write_header file, title=nil
+  header = <<"EOS"
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>Highcharts Example</title>
+
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+		<script type="text/javascript">
+$(function () {
+        $('#container').highcharts({
+            chart: {
+                zoomType: 'x',
+                spacingRight: 20
+            },
+            title: {
+                text: '#{title}'
+            },
+            subtitle: {
+                text: document.ontouchstart === undefined ?
+                    'Click and drag in the plot area to zoom in' :
+                    'Drag your finger over the plot to zoom in'
+            },
+            xAxis: {
+                type: 'datetime',
+                maxZoom: 14 * 24 * 3600000, // fourteen days
+                title: {
+                    text: null
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Exchange rate'
+                }
+            },
+            tooltip: {
+                shared: true
+            },
+            legend: {
+                enabled: false
+            },
+            plotOptions: {
+                area: {
+                    fillColor: {
+                        linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1},
+                        stops: [
+                            [0, Highcharts.getOptions().colors[0]],
+                            [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                        ]
+                    },
+                    lineWidth: 1,
+                    marker: {
+                        enabled: false
+                    },
+                    shadow: false,
+                    states: {
+                        hover: {
+                            lineWidth: 1
+                        }
+                    },
+                    threshold: null
+                }
+            },
+    
+            series: [{
+                type: 'area',
+                name: 'USD to EUR',
+                pointInterval: 24 * 3600 * 1000,
+                pointStart: Date.UTC(2006, 0, 01),
+                data: [
+EOS
+  file.write header
 end
 
 def write_data file, data
   last = data.length - 1
   data.each_with_index do |datum, i|
-    file.write "\"#{i},#{datum}\\n\""
-    if last == i
-      file.write ",\n"
-    else
-      file.write " +\n"
-    end
+    file.write "#{datum}\n"
   end
 end
 
 def write_footer file
-  file.write "{ }\n"
-  file.write ");\n"
-  file.write "</script>\n"
-  file.write "</body>\n"
-  file.write "</html>\n"
+  footer = <<EOS
+                ]
+            }]
+        });
+    });
+    
+
+		</script>
+	</head>
+	<body>
+<script src="highcharts.js"></script>
+<script src="exporting.js"></script>
+
+<div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+
+	</body>
+</html>
+EOS
+  file.write footer
 end
 
 #####
 
+title = "Sample Graph"
+
 filename = ARGV.shift
-usage unless filename
+title = ARGV.shift
+
+unless filename
+  usage
+  exit
+end
+
+title = "Sample Graph" unless title
 
 data = []
 
@@ -72,7 +153,7 @@ end
 outputfile = generate_html_name filename
 
 File.open(outputfile, "w") do |f|
-  write_header f
+  write_header f, title
   write_data f, data
   write_footer f
 end
